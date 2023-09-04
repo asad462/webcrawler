@@ -1,5 +1,30 @@
 /* Helps in accessing DOM APIs */
 const { JSDOM } = require('jsdom')
+
+async function crawlPage(currentURL){
+    console.log("Currently crawling : " + currentURL)
+    try{
+        const resp = await fetch(currentURL)
+        if(resp.status > 399){
+            console.log("Error in fetch with status code : " + resp.status + " on page : " + currentURL)
+            return
+        }
+
+        const contentType = resp.headers.get("content-type")
+        if(!contentType.includes("text/html")){
+            console.log("Non HTML response, content type is " + contentType + " on page : " + currentURL)
+            return
+        }
+        /* .text() gives HTML Output. Response body is formatted as HTML, it returns a promise */
+        console.log(await resp.text())
+    }
+    catch(err){
+        console.log("Error : " + err.message + ", on page : " + currentURL)
+    }
+    
+}
+
+
 function getURLfromHTML(HTMLbody, baseURL){
     const urls = []
     const dom = new JSDOM(HTMLbody)
@@ -50,5 +75,6 @@ function normalizeURL(urlString){
 
 module.exports = {
     normalizeURL,
-    getURLfromHTML
+    getURLfromHTML,
+    crawlPage
 }
