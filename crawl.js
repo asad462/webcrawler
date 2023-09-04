@@ -1,26 +1,57 @@
 /* Helps in accessing DOM APIs */
 const { JSDOM } = require('jsdom')
 
-async function crawlPage(currentURL){
+async function crawlPage(baseURL, currentURL, pages){
+    
+    const baseURLObj = new URL(baseURL)
+    const currentURLObj = new URL(currentURL)
+
+    if(baseURLObj.hostname !== currentURLObj.hostname){
+        return pages
+    }
+
+    const normalizedCurrentURL = normalizeURL(currentURL)
+    /* If this page is already seen.... */
+    if(pages[normalizedCurrentURL] > 0){
+        pages[normalizedCurrentURL]++
+        return pages
+    }
+
+    pages[normalizedCurrentURL] = 1
+
     console.log("Currently crawling : " + currentURL)
+
     try{
         const resp = await fetch(currentURL)
         if(resp.status > 399){
             console.log("Error in fetch with status code : " + resp.status + " on page : " + currentURL)
-            return
+            return pages
         }
 
         const contentType = resp.headers.get("content-type")
         if(!contentType.includes("text/html")){
             console.log("Non HTML response, content type is " + contentType + " on page : " + currentURL)
-            return
+            return pages
         }
         /* .text() gives HTML Output. Response body is formatted as HTML, it returns a promise */
-        console.log(await resp.text())
+        const HTMLbody = await resp.text()
+
+        /* Extract URLs from HTML */
+
+       const nextURLs = getURLfromHTML(HTMLbody,baseURL)
+
+        for(const nextURL of nextURLs){
+            /* We will recursively crawl these pages */
+            pages = await crawlPage(baseURL, nextURL, pages)
+        }
+
+    
     }
     catch(err){
         console.log("Error : " + err.message + ", on page : " + currentURL)
     }
+
+    return pages
     
 }
 
